@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/captured_item.dart';
@@ -16,6 +17,7 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 
   CameraBloc() : super(const CameraState()) {
     on<InitializeCameraEvent>(_onInitialize);
+    on<RequestCameraPermissionEvent>(_onRequestPermission);
     on<SetZoomLevelEvent>(_onSetZoomLevel);
     on<PinchZoomEvent>(_onPinchZoom);
     on<SetFocusPointEvent>(_onSetFocusPoint);
@@ -32,6 +34,20 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   ) async {
     emit(state.copyWith(isInitializing: true, errorMessage: null));
     try {
+      final status = await Permission.camera.status;
+      if (!status.isGranted) {
+        final requested = await Permission.camera.request();
+        if (!requested.isGranted) {
+          emit(state.copyWith(
+            isInitializing: false,
+            isPermissionDenied: true,
+            isPermanentlyDenied: requested.isPermanentlyDenied,
+            errorMessage: 'Camera permission is required to use SnapSync Pro.',
+          ));
+          return;
+        }
+      }
+
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
         emit(state.copyWith(
@@ -45,8 +61,47 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     } catch (e) {
       emit(state.copyWith(
         isInitializing: false,
-        errorMessage: 'Failed to initialize camera: ${e.toString()}',
+        isPermissionDenied: true,
+        errorMessage: 'Camera permission or initialization error: ${e.toString()}',
       ));
+    }
+  }
+
+  Future<void> _onRequestPermission(
+    RequestCameraPermissionEvent event,
+    Emitter<CameraState> emit,
+  ) async {
+    final currentStatus = await Permission.camera.status;
+    if (currentStatus.isGranted) {
+      emit(state.copyWith(
+        isPermissionDenied: false,
+        isPermanentlyDenied: false,
+        errorMessage: null,
+      ));
+      add(InitializeCameraEvent());
+      return;
+    }
+
+    if (currentStatus.isPermanentlyDenied) {
+      await openAppSettings();
+      return;
+    }
+
+    final requested = await Permission.camera.request();
+    if (requested.isGranted) {
+      emit(state.copyWith(
+        isPermissionDenied: false,
+        isPermanentlyDenied: false,
+        errorMessage: null,
+      ));
+      add(InitializeCameraEvent());
+    } else {
+      emit(state.copyWith(
+        isPermissionDenied: true,
+        isPermanentlyDenied: true,
+        errorMessage: 'Camera permission is required. Enable it in App Settings.',
+      ));
+      await openAppSettings();
     }
   }
 

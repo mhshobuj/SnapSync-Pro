@@ -48,3 +48,5 @@ class ToggleCameraLensEvent extends CameraEvent {}
 class ToggleFlashEvent extends CameraEvent {}
 
 class ClearActiveBatchEvent extends CameraEvent {}
+
+class RequestCameraPermissionEvent extends CameraEvent {}

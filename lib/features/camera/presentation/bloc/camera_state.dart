@@ -18,6 +18,9 @@ class CameraState extends Equatable {
   final String? errorMessage;
   final FlashMode flashMode;
 
+  final bool isPermissionDenied;
+  final bool isPermanentlyDenied;
+
   const CameraState({
     this.isInitialized = false,
     this.isInitializing = false,
@@ -32,6 +35,8 @@ class CameraState extends Equatable {
     this.isCapturing = false,
     this.errorMessage,
     this.flashMode = FlashMode.off,
+    this.isPermissionDenied = false,
+    this.isPermanentlyDenied = false,
   });
 
   CameraState copyWith({
@@ -48,6 +53,8 @@ class CameraState extends Equatable {
     bool? isCapturing,
     String? errorMessage,
     FlashMode? flashMode,
+    bool? isPermissionDenied,
+    bool? isPermanentlyDenied,
   }) {
     return CameraState(
       isInitialized: isInitialized ?? this.isInitialized,
@@ -63,6 +70,8 @@ class CameraState extends Equatable {
       isCapturing: isCapturing ?? this.isCapturing,
       errorMessage: errorMessage,
       flashMode: flashMode ?? this.flashMode,
+      isPermissionDenied: isPermissionDenied ?? this.isPermissionDenied,
+      isPermanentlyDenied: isPermanentlyDenied ?? this.isPermanentlyDenied,
     );
   }
 
@@ -81,5 +90,7 @@ class CameraState extends Equatable {
         isCapturing,
         errorMessage,
         flashMode,
+        isPermissionDenied,
+        isPermanentlyDenied,
       ];
 }

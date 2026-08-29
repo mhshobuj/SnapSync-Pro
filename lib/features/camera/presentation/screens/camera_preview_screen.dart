@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../bloc/camera_bloc.dart';
 import '../bloc/camera_event.dart';
@@ -21,13 +22,27 @@ class CameraPreviewScreen extends StatefulWidget {
   State<CameraPreviewScreen> createState() => _CameraPreviewScreenState();
 }
 
-class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
+class _CameraPreviewScreenState extends State<CameraPreviewScreen> with WidgetsBindingObserver {
   double _baseScale = 1.0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     context.read<CameraBloc>().add(InitializeCameraEvent());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<CameraBloc>().add(InitializeCameraEvent());
+    }
   }
 
   Future<bool> _showExitConfirmationDialog(BuildContext context) async {
@@ -111,7 +126,7 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
         backgroundColor: Colors.black,
       body: BlocConsumer<CameraBloc, CameraState>(
         listener: (context, state) {
-          if (state.errorMessage != null) {
+          if (state.errorMessage != null && !state.isPermissionDenied) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.errorMessage!),
@@ -366,6 +381,107 @@ class _CameraPreviewScreenState extends State<CameraPreviewScreen> {
                   ),
                 ),
               ),
+
+              // 6. Mandatory Camera Permission Request Overlay
+              if (cameraState.isPermissionDenied)
+                Container(
+                  color: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.all(28),
+                  child: SafeArea(
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E293B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.5),
+                              blurRadius: 20,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFEF4444).withOpacity(0.15),
+                                border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.5)),
+                              ),
+                              child: const Icon(
+                                Icons.no_photography_rounded,
+                                size: 40,
+                                color: Color(0xFFEF4444),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text(
+                              'Camera Access Required',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'SnapSync Pro requires camera permission to capture images. You must grant camera access to continue using the application.',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 28),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3B82F6),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: Icon(
+                                  cameraState.isPermanentlyDenied
+                                      ? Icons.settings_rounded
+                                      : Icons.security_rounded,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  cameraState.isPermanentlyDenied
+                                      ? 'OPEN APP SETTINGS'
+                                      : 'GRANT CAMERA PERMISSION',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  if (cameraState.isPermanentlyDenied) {
+                                    await openAppSettings();
+                                  } else {
+                                    context.read<CameraBloc>().add(RequestCameraPermissionEvent());
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
