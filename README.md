@@ -66,8 +66,7 @@ lib/
 
 ## 4. Generative AI Usage Statement
 
-Generative AI (Antigravity AI Assistant) was used as a pair-programming partner during development for architectural planning, code structuring, and refining UI interactions.
-
+Generative AI (Antigravity AI Assistant) was used as a pair-programming partner during development.
 ### Essential Prompts Used:
 1. **Camera Controls & Hardware Integration Prompt**:
    > *"Help me build a custom Flutter camera preview using `CameraController`. I need smooth pinch-to-zoom with min/max bounds, a vertical zoom slider, preset zoom pills (2x, 3x, 5x), and tap-to-focus with an animated focus ring at the tap position."*
