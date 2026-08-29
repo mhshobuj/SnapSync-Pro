@@ -6,9 +6,9 @@
 
 ## 1. Screenshots & Visual Interface
 
-| White Splash Screen | Custom Camera Viewport | Pending Uploads Manager |
+| Splash Screen | Custom Camera Viewport | Pending Uploads Manager |
 |:---:|:---:|:---:|
-| <img src="assets/screenshots/camera_preview.png" width="240"/> | <img src="assets/screenshots/camera_preview.png" width="240"/> | <img src="assets/screenshots/upload_manager.png" width="240"/> |
+| <img src="assets/screenshots/splash_screen.png" width="240"/> | <img src="assets/screenshots/camera_preview.png" width="240"/> | <img src="assets/screenshots/sync_upload.png" width="240"/> |
 
 ---
 
