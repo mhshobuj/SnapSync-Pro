@@ -32,10 +32,25 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     InitializeCameraEvent event,
     Emitter<CameraState> emit,
   ) async {
+    // If camera is already initialized and active, clear any error and return
+    if (state.isInitialized && state.controller != null && state.controller!.value.isInitialized) {
+      emit(state.copyWith(
+        isPermissionDenied: false,
+        isPermanentlyDenied: false,
+        errorMessage: null,
+      ));
+      return;
+    }
+
     emit(state.copyWith(isInitializing: true, errorMessage: null));
     try {
       final status = await Permission.camera.status;
-      if (!status.isGranted) {
+      if (status.isGranted) {
+        emit(state.copyWith(
+          isPermissionDenied: false,
+          isPermanentlyDenied: false,
+        ));
+      } else {
         final requested = await Permission.camera.request();
         if (!requested.isGranted) {
           emit(state.copyWith(
@@ -46,12 +61,17 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
           ));
           return;
         }
+        emit(state.copyWith(
+          isPermissionDenied: false,
+          isPermanentlyDenied: false,
+        ));
       }
 
       _cameras = await availableCameras();
       if (_cameras.isEmpty) {
         emit(state.copyWith(
           isInitializing: false,
+          isPermissionDenied: false,
           errorMessage: 'No hardware cameras found on this device.',
         ));
         return;
@@ -59,11 +79,21 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
 
       await _initSelectedCamera(emit);
     } catch (e) {
-      emit(state.copyWith(
-        isInitializing: false,
-        isPermissionDenied: true,
-        errorMessage: 'Camera permission or initialization error: ${e.toString()}',
-      ));
+      final status = await Permission.camera.status;
+      if (status.isGranted) {
+        emit(state.copyWith(
+          isInitializing: false,
+          isPermissionDenied: false,
+          isPermanentlyDenied: false,
+          errorMessage: null,
+        ));
+      } else {
+        emit(state.copyWith(
+          isInitializing: false,
+          isPermissionDenied: true,
+          errorMessage: 'Camera permission required.',
+        ));
+      }
     }
   }
 
@@ -106,14 +136,34 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
   }
 
   Future<void> _initSelectedCamera(Emitter<CameraState> emit) async {
+    // Dispose previous controller first to free CameraX native surface bindings
+    if (state.controller != null) {
+      try {
+        await state.controller!.dispose();
+      } catch (_) {}
+    }
+
     final camera = _cameras[_selectedCameraIndex];
-    final controller = CameraController(
+    CameraController controller = CameraController(
       camera,
       ResolutionPreset.high,
       enableAudio: false,
     );
 
-    await controller.initialize();
+    try {
+      await controller.initialize();
+    } catch (e) {
+      // Fallback to medium resolution if high resolution surface binding fails
+      try {
+        await controller.dispose();
+      } catch (_) {}
+      controller = CameraController(
+        camera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await controller.initialize();
+    }
 
     double minZoom = 1.0;
     double maxZoom = 5.0;
@@ -133,6 +183,9 @@ class CameraBloc extends Bloc<CameraEvent, CameraState> {
     emit(state.copyWith(
       isInitialized: true,
       isInitializing: false,
+      isPermissionDenied: false,
+      isPermanentlyDenied: false,
+      errorMessage: null,
       controller: controller,
       minZoom: minZoom,
       maxZoom: maxZoom,
