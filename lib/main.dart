@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'core/network/mock_network_service.dart';
+import 'core/services/background_sync_worker.dart';
 import 'core/theme/app_theme.dart';
 import 'features/camera/presentation/bloc/camera_bloc.dart';
 import 'features/splash/presentation/screens/splash_screen.dart';
@@ -21,6 +22,9 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
+
+  // Initialize Workmanager background worker
+  await BackgroundSyncWorker.initialize();
 
   // Initialize local persistent storage (Hive)
   final localDataSource = SyncLocalDataSource();
